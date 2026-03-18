@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>€1M Investment Tracker</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --card: #1a1d27; --border: #2a2d3a;
+      --accent: #6c63ff; --accent-light: #8b85ff;
+      --green: #22c55e; --text: #e2e8f0; --muted: #8892a4;
+      --radius: 12px;
+      --cons: #60a5fa; --neut: #a78bfa; --aggr: #34d399;
+      --equity: #fb923c;
+    }
+    body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; min-height:100vh; padding:32px 16px; }
+    .container { max-width:960px; margin:0 auto; }
+    header { text-align:center; margin-bottom:36px; }
+    header h1 { font-size:1.9rem; font-weight:800; background:linear-gradient(135deg,#6c63ff,#a78bfa); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:6px; }
+    header p { color:var(--muted); font-size:0.88rem; }
+
+    .section-label { font-size:0.72rem; text-transform:uppercase; letter-spacing:.09em; color:var(--muted); margin-bottom:14px; }
+
+    .grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-bottom:16px; }
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px; }
+    @media(max-width:680px){ .grid-3,.grid-2{ grid-template-columns:1fr; } }
+
+    .card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; }
+
+    .field { margin-bottom:14px; }
+    .field:last-child { margin-bottom:0; }
+    label { display:block; font-size:0.8rem; color:var(--muted); margin-bottom:5px; }
+
+    .slider-row { display:flex; align-items:center; gap:10px; }
+    input[type="range"] { -webkit-appearance:none; flex:1; background:var(--border); border:none; height:5px; border-radius:3px; cursor:pointer; outline:none; }
+    input[type="range"]::-webkit-slider-thumb { -webkit-appearance:none; width:16px; height:16px; border-radius:50%; background:var(--accent); cursor:pointer; border:2px solid var(--bg); }
+    .slider-val { min-width:48px; text-align:right; font-size:.9rem; font-weight:700; color:var(--accent-light); }
+
+    .input-wrap { position:relative; display:flex; align-items:center; }
+    .prefix { position:absolute; left:10px; color:var(--muted); font-size:.85rem; pointer-events:none; }
+    .has-prefix input { padding-left:24px; }
+    input[type="number"] { width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:.9rem; padding:8px 10px; outline:none; transition:border-color .2s; }
+    input[type="number"]:focus { border-color:var(--accent); }
+    input[type="number"]::-webkit-inner-spin-button { opacity:.4; }
+
+    /* Toggle */
+    .toggle-row { display:flex; align-items:center; gap:10px; margin-bottom:16px; cursor:pointer; user-select:none; }
+    .toggle-row span { font-size:.85rem; color:var(--text); }
+    .toggle { width:36px; height:20px; background:var(--border); border-radius:10px; position:relative; transition:background .2s; flex-shrink:0; }
+    .toggle::after { content:''; position:absolute; left:3px; top:3px; width:14px; height:14px; border-radius:50%; background:#fff; transition:left .2s; }
+    .toggle.on { background:var(--accent); }
+    .toggle.on::after { left:19px; }
+
+    /* Mortgage section */
+    .mortgage-section { margin-bottom:16px; }
+    .mortgage-body { display:none; }
+    .mortgage-body.open { display:block; }
+
+    .mortgage-info {
+      background:#1a1510; border:1px solid rgba(251,146,60,.25); border-radius:var(--radius);
+      padding:14px 18px; margin-bottom:14px; font-size:.82rem; color:#fdba74; line-height:1.6;
+    }
+    .mortgage-info strong { color:var(--equity); }
+
+    /* Scenario cards */
+    .scenarios-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-bottom:16px; }
+    @media(max-width:680px){ .scenarios-grid{ grid-template-columns:1fr; } }
+
+    .sc-card { border-radius:var(--radius); padding:20px; border:1px solid; position:relative; overflow:hidden; }
+    .sc-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
+
+    .sc-card.conservative { background:#0e1520; border-color:rgba(96,165,250,.3); }
+    .sc-card.conservative::before { background:var(--cons); }
+    .sc-card.neutral { background:#12102a; border-color:rgba(167,139,250,.35); }
+    .sc-card.neutral::before { background:var(--neut); }
+    .sc-card.aggressive { background:#0b1a14; border-color:rgba(52,211,153,.3); }
+    .sc-card.aggressive::before { background:var(--aggr); }
+
+    .sc-name { font-size:.72rem; text-transform:uppercase; letter-spacing:.1em; font-weight:700; margin-bottom:10px; }
+    .conservative .sc-name { color:var(--cons); }
+    .neutral .sc-name { color:var(--neut); }
+    .aggressive .sc-name { color:var(--aggr); }
+
+    .sc-rate { font-size:.72rem; color:var(--muted); background:rgba(255,255,255,.05); padding:2px 8px; border-radius:20px; float:right; }
+
+    .sc-monthly { font-size:1.85rem; font-weight:800; line-height:1; color:#fff; margin:10px 0 3px; }
+    .sc-sub { font-size:.75rem; color:var(--muted); margin-bottom:14px; }
+
+    .sc-stats { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .sc-stat .v { font-size:.9rem; font-weight:700; }
+    .conservative .sc-stat .v { color:var(--cons); }
+    .neutral .sc-stat .v { color:var(--neut); }
+    .aggressive .sc-stat .v { color:var(--aggr); }
+    .sc-stat .l { font-size:.68rem; color:var(--muted); }
+
+    .equity-badge { display:inline-block; font-size:.68rem; font-weight:700; padding:2px 7px; border-radius:20px; background:rgba(251,146,60,.15); color:var(--equity); margin-top:8px; }
+
+    /* Chart */
+    canvas { display:block; width:100% !important; height:230px !important; }
+    .legend { display:flex; gap:16px; flex-wrap:wrap; margin-top:12px; }
+    .legend-item { display:flex; align-items:center; gap:5px; font-size:.75rem; color:var(--muted); }
+    .ldot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+    .lline { width:14px; height:2px; border-radius:2px; flex-shrink:0; }
+    .ldash { width:14px; height:0; border-top:2px dashed rgba(255,255,255,.3); flex-shrink:0; }
+
+    /* Table */
+    .table-wrap { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:.82rem; }
+    th { text-align:left; padding:8px 12px; color:var(--muted); font-weight:500; font-size:.7rem; text-transform:uppercase; letter-spacing:.05em; border-bottom:1px solid var(--border); white-space:nowrap; }
+    td { padding:8px 12px; border-bottom:1px solid rgba(42,45,58,.45); white-space:nowrap; }
+    tr:last-child td { border-bottom:none; }
+    tr:hover td { background:rgba(108,99,255,.04); }
+    .tc { color:var(--cons); } .tn { color:var(--neut); } .ta { color:var(--aggr); } .te { color:var(--equity); }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>€1,000,000 Investment Tracker</h1>
+    <p>Three investment profiles · Dutch mortgage integration · Inflation-adjusted</p>
+  </header>
+
+  <!-- Row 1: Age + Money + Inflation -->
+  <div class="grid-3">
+    <div class="card">
+      <div class="section-label">Age</div>
+      <div class="field">
+        <label>Current Age</label>
+        <div class="slider-row">
+          <input type="range" id="age" min="18" max="64" value="30"
+            oninput="document.getElementById('ageVal').textContent=this.value;recalc()">
+          <span class="slider-val" id="ageVal">30</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>Work Until Age</label>
+        <div class="slider-row">
+          <input type="range" id="retireAge" min="40" max="80" value="65"
+            oninput="document.getElementById('retireVal').textContent=this.value;recalc()">
+          <span class="slider-val" id="retireVal">65</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-label">Investment Goal</div>
+      <div class="field">
+        <label>Current Savings / Investments (€)</label>
+        <div class="input-wrap has-prefix">
+          <span class="prefix">€</span>
+          <input type="number" id="savings" value="0" min="0" step="1000" oninput="recalc()">
+        </div>
+      </div>
+      <div class="field">
+        <label>Target Amount (€)</label>
+        <div class="input-wrap has-prefix">
+          <span class="prefix">€</span>
+          <input type="number" id="target" value="1000000" min="10000" step="10000" oninput="recalc()">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-label">Macro</div>
+      <div class="field">
+        <label>Expected Inflation Rate</label>
+        <div class="slider-row">
+          <input type="range" id="inflation" min="0" max="6" value="2" step="0.5"
+            oninput="document.getElementById('inflVal').textContent=this.value+'%';recalc()">
+          <span class="slider-val" id="inflVal">2%</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>NL House Price Appreciation / yr</label>
+        <div class="slider-row">
+          <input type="range" id="houseAppreciation" min="0" max="8" value="3" step="0.5"
+            oninput="document.getElementById('houseAppVal').textContent=this.value+'%';recalc()">
+          <span class="slider-val" id="houseAppVal">3%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mortgage Section -->
+  <div class="mortgage-section card" style="margin-bottom:16px">
+    <div class="toggle-row" onclick="toggleMortgage()">
+      <div class="toggle" id="mortgageToggle"></div>
+      <span>Include Dutch Mortgage</span>
+      <span style="font-size:.75rem;color:var(--muted);margin-left:auto">Tracks home equity & mortgage cost</span>
+    </div>
+    <div class="mortgage-body" id="mortgageBody">
+      <div class="mortgage-info">
+        <strong>How this works:</strong> Your monthly mortgage payment is shown as a separate cost. As you pay down the mortgage,
+        your <strong>home equity</strong> grows (mortgage repayment + house appreciation). You can choose whether to
+        count home equity toward your €1M target.
+        <br><br>
+        Dutch average house price 2024: <strong>~€435,000</strong>. Historical NL house price growth: ~3–4%/yr.
+      </div>
+
+      <div class="grid-3">
+        <div class="card" style="background:#0f1117">
+          <div class="section-label">Your Home</div>
+          <div class="field">
+            <label>Current Home Value (€)</label>
+            <div class="input-wrap has-prefix">
+              <span class="prefix">€</span>
+              <input type="number" id="homeValue" value="435000" min="0" step="5000" oninput="recalc()">
+            </div>
+          </div>
+          <div class="field">
+            <label>Mortgage Outstanding (€)</label>
+            <div class="input-wrap has-prefix">
+              <span class="prefix">€</span>
+              <input type="number" id="mortgageDebt" value="350000" min="0" step="5000" oninput="recalc()">
+            </div>
+          </div>
+        </div>
+        <div class="card" style="background:#0f1117">
+          <div class="section-label">Mortgage Terms</div>
+          <div class="field">
+            <label>Interest Rate</label>
+            <div class="slider-row">
+              <input type="range" id="mortgageRate" min="1" max="8" value="4" step="0.1"
+                oninput="document.getElementById('mortRateVal').textContent=this.value+'%';recalc()">
+              <span class="slider-val" id="mortRateVal">4%</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Years Remaining on Mortgage</label>
+            <div class="slider-row">
+              <input type="range" id="mortgageYears" min="1" max="30" value="25"
+                oninput="document.getElementById('mortYearsVal').textContent=this.value+'y';recalc()">
+              <span class="slider-val" id="mortYearsVal">25y</span>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="background:#0f1117">
+          <div class="section-label">Equity in Target</div>
+          <div class="field">
+            <label style="margin-bottom:10px">Count home equity toward €1M target?</label>
+            <div class="toggle-row" onclick="toggleEquityInTarget()" style="margin-bottom:0">
+              <div class="toggle" id="equityToggle"></div>
+              <span style="font-size:.82rem">Include equity in target</span>
+            </div>
+          </div>
+          <div id="mortgagePaymentDisplay" style="margin-top:14px; padding:10px; background:rgba(251,146,60,.08); border-radius:8px; border:1px solid rgba(251,146,60,.2)">
+            <div style="font-size:.7rem;color:var(--muted);margin-bottom:2px">Monthly mortgage payment</div>
+            <div style="font-size:1.2rem;font-weight:700;color:var(--equity)" id="mortgagePaymentVal">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scenario Cards -->
+  <div class="scenarios-grid" id="scenariosGrid"></div>
+
+  <!-- Chart -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="section-label">Portfolio Growth Projection</div>
+    <canvas id="chart"></canvas>
+    <div class="legend" id="chartLegend"></div>
+  </div>
+
+  <!-- Table -->
+  <div class="card">
+    <div class="section-label">Yearly Breakdown</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr id="tableHead"></tr></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  const PROFILES = [
+    { key:'conservative', label:'Conservative', rate:0.04, desc:'Bonds & low-risk funds' },
+    { key:'neutral',      label:'Neutral',      rate:0.07, desc:'Balanced portfolio' },
+    { key:'aggressive',   label:'Aggressive',   rate:0.10, desc:'Stocks & growth assets' },
+  ];
+
+  let mortgageOn = false;
+  let equityInTarget = false;
+
+  function toggleMortgage() {
+    mortgageOn = !mortgageOn;
+    document.getElementById('mortgageToggle').className = 'toggle' + (mortgageOn ? ' on' : '');
+    document.getElementById('mortgageBody').className = 'mortgage-body' + (mortgageOn ? ' open' : '');
+    recalc();
+  }
+
+  function toggleEquityInTarget() {
+    equityInTarget = !equityInTarget;
+    document.getElementById('equityToggle').className = 'toggle' + (equityInTarget ? ' on' : '');
+    recalc();
+  }
+
+  function fmt(n) { return '€' + Math.round(n).toLocaleString('nl-NL'); }
+  function fmtS(n) {
+    if (n >= 1e6) return '€' + (n/1e6).toFixed(2) + 'M';
+    if (n >= 1e3) return '€' + (n/1e3).toFixed(1) + 'K';
+    return fmt(n);
+  }
+
+  function calcMortgage(debt, annualRate, years) {
+    // Annuity mortgage (annuïteitenhypotheek) - standard in NL
+    const r = annualRate / 12;
+    const n = years * 12;
+    if (r === 0) return { monthly: debt / n, schedule: buildSchedule(debt, 0, n) };
+    const monthly = debt * r * Math.pow(1+r,n) / (Math.pow(1+r,n) - 1);
+    return { monthly, debt, r, n };
+  }
+
+  function buildEquitySchedule(homeValue, debt, mortgageRate, mortgageYears, investYears, houseAppRate) {
+    const r = mortgageRate / 12;
+    const n = mortgageYears * 12;
+    const monthly = r === 0 ? debt / n : debt * r * Math.pow(1+r,n) / (Math.pow(1+r,n) - 1);
+
+    const yearly = [];
+    let balance = debt;
+    let hv = homeValue;
+
+    for (let y = 0; y <= investYears; y++) {
+      const equity = Math.max(0, hv - balance);
+      yearly.push({ equity, homeValue: hv, mortgage: balance, monthlyPayment: monthly });
+
+      if (y < investYears) {
+        // Pay down mortgage for 12 months
+        for (let m = 0; m < 12; m++) {
+          if (balance <= 0) break;
+          const interest = balance * r;
+          const principal = Math.min(balance, monthly - interest);
+          balance = Math.max(0, balance - principal);
+        }
+        hv *= (1 + houseAppRate);
+      }
+    }
+    return { yearly, monthly };
+  }
+
+  function calcScenario(savings, target, n, nominalRate, inflation) {
+    const realRate = (1 + nominalRate) / (1 + inflation) - 1;
+    const mr = Math.pow(1 + realRate, 1/12) - 1;
+    const months = n * 12;
+
+    const fvSav = savings * Math.pow(1 + realRate, n);
+    const remaining = target - fvSav;
+
+    let monthly = 0;
+    if (remaining > 0) {
+      monthly = Math.abs(mr) < 1e-10 ? remaining / months
+        : remaining * mr / (Math.pow(1+mr, months) - 1);
+    }
+
+    const growth12 = Math.abs(mr) < 1e-10 ? 12 : (Math.pow(1+mr,12)-1)/mr;
+
+    const yearly = [];
+    let portfolio = savings;
+    for (let y = 0; y <= n; y++) {
+      yearly.push(Math.max(0, portfolio));
+      if (y < n) portfolio = portfolio * (1 + realRate) + monthly * 12 * growth12;
+    }
+
+    const totalInvested = savings + Math.max(0, monthly) * months;
+    return { monthly, totalInvested, returns: target - totalInvested, yearly, realRate, nominalRate };
+  }
+
+  function recalc() {
+    const age       = parseInt(document.getElementById('age').value);
+    const retireAge = parseInt(document.getElementById('retireAge').value);
+    const savings   = parseFloat(document.getElementById('savings').value) || 0;
+    const inflation = parseFloat(document.getElementById('inflation').value) / 100;
+    const target    = parseFloat(document.getElementById('target').value) || 1000000;
+    const houseApp  = parseFloat(document.getElementById('houseAppreciation').value) / 100;
+    const n         = Math.max(1, retireAge - age);
+    const curYear   = new Date().getFullYear();
+
+    let equitySchedule = null;
+    let mortgageMonthly = 0;
+
+    if (mortgageOn) {
+      const homeValue    = parseFloat(document.getElementById('homeValue').value) || 0;
+      const mortgageDebt = parseFloat(document.getElementById('mortgageDebt').value) || 0;
+      const mortgageRate = parseFloat(document.getElementById('mortgageRate').value) / 100;
+      const mortgageYears= parseInt(document.getElementById('mortgageYears').value);
+
+      const eq = buildEquitySchedule(homeValue, mortgageDebt, mortgageRate, mortgageYears, n, houseApp);
+      equitySchedule = eq.yearly;
+      mortgageMonthly = eq.monthly;
+      document.getElementById('mortgagePaymentVal').textContent = fmt(mortgageMonthly) + '/mo';
+    }
+
+    const results = PROFILES.map(p => {
+      // Adjust target: if equity counts, subtract projected equity at retirement
+      let effectiveTarget = target;
+      if (mortgageOn && equityInTarget && equitySchedule) {
+        effectiveTarget = Math.max(0, target - equitySchedule[n].equity);
+      }
+      return { ...p, ...calcScenario(savings, effectiveTarget, n, p.rate, inflation), effectiveTarget };
+    });
+
+    // Scenario cards
+    const grid = document.getElementById('scenariosGrid');
+    grid.innerHTML = results.map(r => {
+      const onTrack = r.monthly <= 0;
+      const projEquity = (mortgageOn && equitySchedule) ? equitySchedule[n].equity : 0;
+      return `
+        <div class="sc-card ${r.key}">
+          <span class="sc-rate">${(r.nominalRate*100).toFixed(0)}% / ${(r.realRate*100).toFixed(1)}% real</span>
+          <div class="sc-name">${r.label}</div>
+          <div class="sc-monthly">${onTrack ? 'On track!' : fmt(r.monthly)+'/mo'}</div>
+          <div class="sc-sub">${onTrack ? 'Savings will exceed target' : `${n} years · ${r.desc}`}</div>
+          <div class="sc-stats">
+            <div class="sc-stat"><div class="v">${fmtS(r.totalInvested)}</div><div class="l">Total invested</div></div>
+            <div class="sc-stat"><div class="v">${fmtS(Math.max(0,r.returns))}</div><div class="l">Returns earned</div></div>
+            ${mortgageOn ? `<div class="sc-stat"><div class="v">${fmt(mortgageMonthly)}</div><div class="l">Mortgage/mo</div></div>` : ''}
+            ${mortgageOn && equityInTarget ? `<div class="sc-stat"><div class="v">${fmtS(projEquity)}</div><div class="l">Equity at ${retireAge}</div></div>` : ''}
+          </div>
+          ${mortgageOn && equityInTarget ? `<div class="equity-badge">Home equity reduces target by ${fmtS(projEquity)}</div>` : ''}
+        </div>`;
+    }).join('');
+
+    // Table header
+    const thead = document.getElementById('tableHead');
+    thead.innerHTML = `<th>Age</th><th>Year</th>
+      <th style="color:var(--cons)">Conservative</th>
+      <th style="color:var(--neut)">Neutral</th>
+      <th style="color:var(--aggr)">Aggressive</th>
+      ${mortgageOn ? `<th style="color:var(--equity)">Home Equity</th><th style="color:var(--equity)">Home Value</th>` : ''}`;
+
+    // Table body
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = '';
+    for (let y = 0; y <= n; y++) {
+      const a = age + y;
+      if (a !== age && a !== retireAge && y % 5 !== 0) continue;
+      const tr = document.createElement('tr');
+      const eq = mortgageOn && equitySchedule ? equitySchedule[y] : null;
+      tr.innerHTML = `
+        <td>${a}</td><td>${curYear+y}</td>
+        <td class="tc">${fmtS(results[0].yearly[y])}</td>
+        <td class="tn">${fmtS(results[1].yearly[y])}</td>
+        <td class="ta">${fmtS(results[2].yearly[y])}</td>
+        ${mortgageOn ? `<td class="te">${fmtS(eq.equity)}</td><td class="te">${fmtS(eq.homeValue)}</td>` : ''}`;
+      tbody.appendChild(tr);
+    }
+
+    drawChart(results, equitySchedule, age, n, target);
+  }
+
+  function drawChart(results, equitySchedule, startAge, n, target) {
+    const canvas = document.getElementById('chart');
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.offsetWidth || 800;
+    const H = 230;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, W, H);
+
+    const pad = { top:18, right:20, bottom:34, left:68 };
+    const cW = W - pad.left - pad.right;
+    const cH = H - pad.top - pad.bottom;
+
+    const allVals = results.flatMap(r => r.yearly);
+    if (equitySchedule) allVals.push(...equitySchedule.map(e => e.equity + (results[1]?.yearly[equitySchedule.indexOf(e)] || 0)));
+    allVals.push(target);
+    const maxVal = Math.max(...allVals) * 1.06;
+
+    function xP(i) { return pad.left + (i / n) * cW; }
+    function yP(v) { return pad.top + cH - Math.min(1, Math.max(0, v / maxVal)) * cH; }
+
+    // Grid
+    ctx.strokeStyle = 'rgba(42,45,58,.8)'; ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const y = pad.top + (cH/4)*i;
+      ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left+cW, y); ctx.stroke();
+      ctx.fillStyle='#8892a4'; ctx.font='11px -apple-system,sans-serif'; ctx.textAlign='right';
+      ctx.fillText(fmtS(maxVal*(1-i/4)), pad.left-7, y+4);
+    }
+
+    // X labels
+    ctx.fillStyle='#8892a4'; ctx.font='11px -apple-system,sans-serif'; ctx.textAlign='center';
+    for (let y=0; y<=n; y++) {
+      const a = startAge+y;
+      if (a%5===0||y===0||y===n) ctx.fillText(a, xP(y), H-7);
+    }
+
+    // Target line
+    ctx.setLineDash([5,5]); ctx.strokeStyle='rgba(255,255,255,.22)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(pad.left, yP(target)); ctx.lineTo(pad.left+cW, yP(target)); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='rgba(255,255,255,.3)'; ctx.font='10px -apple-system,sans-serif';
+    ctx.textAlign='left'; ctx.fillText('Target '+fmtS(target), pad.left+4, yP(target)-5);
+
+    const colors = ['#60a5fa','#a78bfa','#34d399'];
+
+    // Draw equity as stacked area on neutral scenario if shown
+    if (equitySchedule && mortgageOn) {
+      ctx.beginPath();
+      ctx.moveTo(xP(0), yP(results[1].yearly[0] + equitySchedule[0].equity));
+      for (let i=0; i<=n; i++) ctx.lineTo(xP(i), yP(results[1].yearly[i] + equitySchedule[i].equity));
+      ctx.lineTo(xP(n), yP(results[1].yearly[n]));
+      for (let i=n; i>=0; i--) ctx.lineTo(xP(i), yP(results[1].yearly[i]));
+      ctx.closePath();
+      ctx.save(); ctx.globalAlpha=0.15; ctx.fillStyle='#fb923c'; ctx.fill(); ctx.restore();
+    }
+
+    results.forEach((r, ri) => {
+      const color = colors[ri];
+      ctx.save(); ctx.globalAlpha=0.08; ctx.fillStyle=color;
+      ctx.beginPath();
+      ctx.moveTo(xP(0), yP(r.yearly[0]));
+      r.yearly.forEach((v,i)=>ctx.lineTo(xP(i), yP(v)));
+      ctx.lineTo(xP(n), pad.top+cH); ctx.lineTo(xP(0), pad.top+cH); ctx.closePath();
+      ctx.fill(); ctx.restore();
+
+      ctx.beginPath();
+      ctx.moveTo(xP(0), yP(r.yearly[0]));
+      r.yearly.forEach((v,i)=>ctx.lineTo(xP(i), yP(v)));
+      ctx.strokeStyle=color; ctx.lineWidth=2; ctx.stroke();
+    });
+
+    // Equity line separately
+    if (equitySchedule && mortgageOn) {
+      ctx.beginPath();
+      ctx.moveTo(xP(0), yP(equitySchedule[0].equity));
+      equitySchedule.forEach((e,i)=>ctx.lineTo(xP(i), yP(e.equity)));
+      ctx.strokeStyle='#fb923c'; ctx.lineWidth=1.5; ctx.setLineDash([4,3]); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Legend
+    const legend = document.getElementById('chartLegend');
+    const items = [
+      { color:'#60a5fa', label:'Conservative (4%)' },
+      { color:'#a78bfa', label:'Neutral (7%)' },
+      { color:'#34d399', label:'Aggressive (10%)' },
+      ...(mortgageOn ? [{ color:'#fb923c', label:'Home equity (NL)', dashed:true }] : []),
+      { color:'rgba(255,255,255,.3)', label:'Target', dashed:true },
+    ];
+    legend.innerHTML = items.map(it => `
+      <div class="legend-item">
+        <div class="${it.dashed ? 'ldash' : 'lline'}" style="border-color:${it.color};background:${it.dashed?'transparent':it.color}"></div>
+        ${it.label}
+      </div>`).join('');
+  }
+
+  recalc();
+  window.addEventListener('resize', recalc);
+</script>
+</body>
+</html>
